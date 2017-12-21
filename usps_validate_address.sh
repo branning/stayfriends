@@ -49,4 +49,21 @@ payload="<AddressValidateRequest USERID=\"${userid}\"><Address ID=\"0\"><Address
 <Zip5>${zip}</Zip5><Zip4></Zip4></Address></AddressValidateRequest>"
 
 url="http://${endpoint}?API=${api}&XML=${payload}"
-wget -q -O- "$url" | xmllint --format -
+result=$(mktemp -t 'usps-validate')
+trap "rm -f $result" INT EXIT
+
+wget -q -O "$result" "$url"
+# to show the whole result
+#xmllint --format "$result"
+
+street=$(xmllint --xpath 'string(//Address2)' "$result")
+city=$(xmllint --xpath 'string(//City)' "$result")
+state=$(xmllint --xpath 'string(//State)' "$result")
+zip5=$(xmllint --xpath 'string(//Zip5)' "$result")
+zip4=$(xmllint --xpath 'string(//Zip4)' "$result")
+
+# show the formatted, standardized address
+cat <<EOF
+${street}
+${city}, ${state}  ${zip5}-${zip4}
+EOF
