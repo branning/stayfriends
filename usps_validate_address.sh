@@ -6,7 +6,7 @@ here=$(cd $(dirname $BASH_SOURCE[0]); echo $PWD)
 
 quiet(){ $@ >/dev/null 2>&1; }
 error(){ echo >&2 $*; }
-die(){ echo "got $# arguments"; error "$@"; exit 1; }
+die(){ error "$@"; exit 1; }
 have(){ quiet command -v "$1" || die "I require ${1} but it's not here"; }
 usage(){
   cat <<-EOF
@@ -55,6 +55,13 @@ trap "rm -f $result" INT EXIT
 wget -q -O "$result" "$url"
 # to show the whole result
 #xmllint --format "$result"
+if quiet xmllint --xpath '//Error' "$result"
+then
+  #cat "$result" && printf '\n'
+  errno=$(xmllint --xpath 'string(//Error/Number)' "$result")
+  description=$(xmllint --xpath 'string(//Error/Description)' "$result")
+  die "The USPS ${api} API returned an error (${errno}): ${description}"
+fi
 
 street=$(xmllint --xpath 'string(//Address2)' "$result")
 city=$(xmllint --xpath 'string(//City)' "$result")
